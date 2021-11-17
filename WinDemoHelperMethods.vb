@@ -5,7 +5,6 @@ Imports System.Reflection
 Imports System.Windows.Forms
 Imports Atalasoft.Imaging
 Imports Atalasoft.Imaging.Codec
-Imports Atalasoft.Imaging.Codec.CadCam
 Imports Atalasoft.Imaging.Codec.Dicom
 Imports Atalasoft.Imaging.Codec.Jbig2
 Imports Atalasoft.Imaging.Codec.Jpeg2000
@@ -74,11 +73,6 @@ Namespace AtalaDemos
             End Try
 
             Try
-                _decoderImageFormats.Add(New ImageFormatInformation(New DwgDecoder, "Cad/Cam (*.dwg, *.dxf)", "*.dwg;*.dxf"))
-            Catch e1 As AtalasoftLicenseException
-            End Try
-
-            Try
                 _decoderImageFormats.Add(New ImageFormatInformation(New Jb2Decoder, "JBIG2 (*.jb2)", "*.jb2"))
             Catch e1 As AtalasoftLicenseException
             End Try
@@ -119,7 +113,7 @@ Namespace AtalaDemos
             End Try
 
             Try
-                _encoderImageFormats.Add(New ImageFormatInformation(New Jp2Encoder, "JPEG2000 (*.jpf, *.jp2, *.jpc, *.j2c, *.j2k)", "*.jpf;*.jp2;*.jpc;*.j2c;*.j2k"))
+                _encoderImageFormats.Add(New ImageFormatInformation(New Jpeg2000Encoder, "JPEG2000 (*.jpf, *.jp2, *.jpc, *.j2c, *.j2k)", "*.jpf;*.jp2;*.jpc;*.j2c;*.j2k"))
             Catch e1 As AtalasoftLicenseException
             End Try
 

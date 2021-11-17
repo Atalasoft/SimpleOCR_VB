@@ -4,9 +4,9 @@ Demo VB application shows usage of OCR functionality that [DotImage](https://www
 ## Description
 OCR Demo demonstrates how to use OCR engines supported by DotImage:
 
- - ABBYY
+ - OmniPage
  - GlyphReader
- - Tesseract 2/3
+ - Tesseract 3
 
 ## Instructions
 

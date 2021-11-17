@@ -21,7 +21,7 @@ Imports Atalasoft.Ocr.GlyphReader
 Imports Atalasoft.Ocr.Tesseract
 Imports Atalasoft.Imaging.Codec
 Imports Atalasoft.Imaging.Codec.Pdf
-Imports Atalasoft.Ocr.Abbyy
+Imports Atalasoft.Ocr.OmniPage
 
 Namespace SimpleOCR
     ''' <summary>
@@ -32,13 +32,15 @@ Namespace SimpleOCR
         Private _validLicense, _hasGR As Boolean
         Private Shared _tempDir As String = System.Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) & "Atalasoft\Demos\OCR_temp"
         Private Shared _tempFile As String = _tempDir & "\temp"
-        Private Shared _outputFile As String = _tempDir & "\output.txt"
+        Private Shared  DefaultOutputFile As String = _tempDir & "\output.txt"
+        Private Shared _outputFile As String = DefaultOutputFile
         Private _selectedMimeType As String = ""
         Private _fileLoaded As Boolean
 
         Private _engine As OcrEngine
-        Private _abbyyEngine As AbbyyEngine
-        Private _abbyyLoader As AbbyyLoader
+        Private _tesseract3 As OcrEngine
+        Private _glyphReader As OcrEngine
+        Private _omniPage As OcrEngine
 
         Private _saveToFile As Boolean = False
 
@@ -65,8 +67,7 @@ Namespace SimpleOCR
         Private WithEvents menuGlyphReaderEngine As System.Windows.Forms.MenuItem
         Private WithEvents menuExperVisionEngine As System.Windows.Forms.MenuItem
         Private WithEvents splitter1 As System.Windows.Forms.Splitter
-        Private WithEvents menuTesseract As System.Windows.Forms.MenuItem
-        Friend WithEvents menuAbbyy As System.Windows.Forms.MenuItem
+        Friend WithEvents menuOmniPage As System.Windows.Forms.MenuItem
         Friend WithEvents menuTesseract3 As System.Windows.Forms.MenuItem
         Private components As System.ComponentModel.IContainer
 
@@ -78,8 +79,8 @@ Namespace SimpleOCR
         ''' </summary>
         <STAThread()> _
         Shared Sub Main()
-            'this is required in the static method to load GlyphReader resources
-            Dim loader As GlyphReaderLoader = New GlyphReaderLoader
+            Dim glyphReaderLoader As GlyphReaderLoader = New GlyphReaderLoader()
+            Dim omniPageLoader As OmniPageLoader = New OmniPageLoader()
             Application.Run(New Form1)
         End Sub
 
@@ -102,178 +103,172 @@ Namespace SimpleOCR
         ''' the contents of this method with the code editor.
         ''' </summary>
         Private Sub InitializeComponent()
-            Me.components = New System.ComponentModel.Container
-            Me.textBox1 = New System.Windows.Forms.TextBox
-            Me.mainMenu1 = New System.Windows.Forms.MainMenu(Me.components)
-            Me.menuFile = New System.Windows.Forms.MenuItem
-            Me.menuFileOpen = New System.Windows.Forms.MenuItem
-            Me.menuFileExit = New System.Windows.Forms.MenuItem
-            Me.menuAction = New System.Windows.Forms.MenuItem
-            Me.menuActionResult = New System.Windows.Forms.MenuItem
-            Me.menuActionDisplay = New System.Windows.Forms.MenuItem
-            Me.menuActionSave = New System.Windows.Forms.MenuItem
-            Me.menuActionTranslate = New System.Windows.Forms.MenuItem
-            Me.menuItem1 = New System.Windows.Forms.MenuItem
-            Me.menuGlyphReaderEngine = New System.Windows.Forms.MenuItem
-            Me.menuAbbyy = New System.Windows.Forms.MenuItem
-            Me.menuTesseract = New System.Windows.Forms.MenuItem
-            Me.menuTesseract3 = New System.Windows.Forms.MenuItem
-            Me.menuHelp = New System.Windows.Forms.MenuItem
-            Me.menuHelpAbout = New System.Windows.Forms.MenuItem
-            Me.workspaceViewer1 = New Atalasoft.Imaging.WinControls.WorkspaceViewer
-            Me.openFileDialog1 = New System.Windows.Forms.OpenFileDialog
-            Me.progressBar1 = New System.Windows.Forms.ProgressBar
-            Me.splitter1 = New System.Windows.Forms.Splitter
-            Me.SuspendLayout()
-            '
-            'textBox1
-            '
-            Me.textBox1.Dock = System.Windows.Forms.DockStyle.Left
-            Me.textBox1.Location = New System.Drawing.Point(0, 0)
-            Me.textBox1.Multiline = True
-            Me.textBox1.Name = "textBox1"
-            Me.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Vertical
-            Me.textBox1.Size = New System.Drawing.Size(336, 649)
-            Me.textBox1.TabIndex = 2
-            '
-            'mainMenu1
-            '
-            Me.mainMenu1.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuFile, Me.menuAction, Me.menuItem1, Me.menuHelp})
-            '
-            'menuFile
-            '
-            Me.menuFile.Index = 0
-            Me.menuFile.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuFileOpen, Me.menuFileExit})
-            Me.menuFile.Text = "File"
-            '
-            'menuFileOpen
-            '
-            Me.menuFileOpen.Index = 0
-            Me.menuFileOpen.Text = "Open"
-            '
-            'menuFileExit
-            '
-            Me.menuFileExit.Index = 1
-            Me.menuFileExit.Text = "Exit"
-            '
-            'menuAction
-            '
-            Me.menuAction.Index = 1
-            Me.menuAction.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuActionResult, Me.menuActionTranslate})
-            Me.menuAction.Text = "Action"
-            '
-            'menuActionResult
-            '
-            Me.menuActionResult.Index = 0
-            Me.menuActionResult.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuActionDisplay, Me.menuActionSave})
-            Me.menuActionResult.Text = "Result"
-            '
-            'menuActionDisplay
-            '
-            Me.menuActionDisplay.Checked = True
-            Me.menuActionDisplay.Index = 0
-            Me.menuActionDisplay.RadioCheck = True
-            Me.menuActionDisplay.Text = "Displays in Text Box"
-            '
-            'menuActionSave
-            '
-            Me.menuActionSave.Index = 1
-            Me.menuActionSave.RadioCheck = True
-            Me.menuActionSave.Text = "Saves to File"
-            '
-            'menuActionTranslate
-            '
-            Me.menuActionTranslate.Index = 1
-            Me.menuActionTranslate.Text = "Translate ..."
-            '
-            'menuItem1
-            '
-            Me.menuItem1.Index = 2
-            Me.menuItem1.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuGlyphReaderEngine, Me.menuAbbyy, Me.menuTesseract, Me.menuTesseract3})
-            Me.menuItem1.Text = "Engine"
-            '
-            'menuGlyphReaderEngine
-            '
-            Me.menuGlyphReaderEngine.Index = 0
-            Me.menuGlyphReaderEngine.Text = "GlyphReader Engine"
-            '
-            'menuAbbyy
-            '
-            Me.menuAbbyy.Index = 1
-            Me.menuAbbyy.Text = "Abbyy"
-            '
-            'menuTesseract
-            '
-            Me.menuTesseract.Index = 2
-            Me.menuTesseract.Text = "Tesseract Engine"
-            '
-            'menuTesseract3
-            '
-            Me.menuTesseract3.Index = 3
-            Me.menuTesseract3.Text = "Tesseract3 Engine"
-            '
-            'menuHelp
-            '
-            Me.menuHelp.Index = 3
-            Me.menuHelp.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuHelpAbout})
-            Me.menuHelp.Text = "Help"
-            '
-            'menuHelpAbout
-            '
-            Me.menuHelpAbout.Index = 0
-            Me.menuHelpAbout.Text = "About ..."
-            '
-            'workspaceViewer1
-            '
-            Me.workspaceViewer1.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
-                        Or System.Windows.Forms.AnchorStyles.Left) _
-                        Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-            Me.workspaceViewer1.AntialiasDisplay = Atalasoft.Imaging.WinControls.AntialiasDisplayMode.ReductionOnly
-            Me.workspaceViewer1.AutoZoom = Atalasoft.Imaging.WinControls.AutoZoomMode.BestFitShrinkOnly
-            Me.workspaceViewer1.DisplayProfile = Nothing
-            Me.workspaceViewer1.Location = New System.Drawing.Point(352, 0)
-            Me.workspaceViewer1.Magnifier.BackColor = System.Drawing.Color.White
-            Me.workspaceViewer1.Magnifier.BorderColor = System.Drawing.Color.Black
-            Me.workspaceViewer1.Magnifier.Size = New System.Drawing.Size(100, 100)
-            Me.workspaceViewer1.Name = "workspaceViewer1"
-            Me.workspaceViewer1.OutputProfile = Nothing
-            Me.workspaceViewer1.Selection = Nothing
-            Me.workspaceViewer1.Size = New System.Drawing.Size(520, 616)
-            Me.workspaceViewer1.TabIndex = 3
-            Me.workspaceViewer1.Text = "workspaceViewer1"
-            '
-            'progressBar1
-            '
-            Me.progressBar1.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left) _
-                        Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-            Me.progressBar1.Location = New System.Drawing.Point(344, 624)
-            Me.progressBar1.Name = "progressBar1"
-            Me.progressBar1.Size = New System.Drawing.Size(528, 24)
-            Me.progressBar1.TabIndex = 4
-            '
-            'splitter1
-            '
-            Me.splitter1.Location = New System.Drawing.Point(336, 0)
-            Me.splitter1.Name = "splitter1"
-            Me.splitter1.Size = New System.Drawing.Size(8, 649)
-            Me.splitter1.TabIndex = 5
-            Me.splitter1.TabStop = False
-            '
-            'Form1
-            '
-            Me.AutoScaleBaseSize = New System.Drawing.Size(5, 13)
-            Me.ClientSize = New System.Drawing.Size(880, 649)
-            Me.Controls.Add(Me.splitter1)
-            Me.Controls.Add(Me.progressBar1)
-            Me.Controls.Add(Me.workspaceViewer1)
-            Me.Controls.Add(Me.textBox1)
-            Me.Menu = Me.mainMenu1
-            Me.Name = "Form1"
-            Me.Text = "Atalasoft Simple OCR Demo"
-            Me.ResumeLayout(False)
-            Me.PerformLayout()
+        Me.components = New System.ComponentModel.Container()
+        Me.textBox1 = New System.Windows.Forms.TextBox()
+        Me.mainMenu1 = New System.Windows.Forms.MainMenu(Me.components)
+        Me.menuFile = New System.Windows.Forms.MenuItem()
+        Me.menuFileOpen = New System.Windows.Forms.MenuItem()
+        Me.menuFileExit = New System.Windows.Forms.MenuItem()
+        Me.menuAction = New System.Windows.Forms.MenuItem()
+        Me.menuActionResult = New System.Windows.Forms.MenuItem()
+        Me.menuActionDisplay = New System.Windows.Forms.MenuItem()
+        Me.menuActionSave = New System.Windows.Forms.MenuItem()
+        Me.menuActionTranslate = New System.Windows.Forms.MenuItem()
+        Me.menuItem1 = New System.Windows.Forms.MenuItem()
+        Me.menuGlyphReaderEngine = New System.Windows.Forms.MenuItem()
+        Me.menuOmniPage = New System.Windows.Forms.MenuItem()
+        Me.menuTesseract3 = New System.Windows.Forms.MenuItem()
+        Me.menuHelp = New System.Windows.Forms.MenuItem()
+        Me.menuHelpAbout = New System.Windows.Forms.MenuItem()
+        Me.workspaceViewer1 = New Atalasoft.Imaging.WinControls.WorkspaceViewer()
+        Me.openFileDialog1 = New System.Windows.Forms.OpenFileDialog()
+        Me.progressBar1 = New System.Windows.Forms.ProgressBar()
+        Me.splitter1 = New System.Windows.Forms.Splitter()
+        Me.SuspendLayout
+        '
+        'textBox1
+        '
+        Me.textBox1.Dock = System.Windows.Forms.DockStyle.Left
+        Me.textBox1.Location = New System.Drawing.Point(0, 0)
+        Me.textBox1.Multiline = true
+        Me.textBox1.Name = "textBox1"
+        Me.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Vertical
+        Me.textBox1.Size = New System.Drawing.Size(336, 649)
+        Me.textBox1.TabIndex = 2
+        '
+        'mainMenu1
+        '
+        Me.mainMenu1.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuFile, Me.menuAction, Me.menuItem1, Me.menuHelp})
+        '
+        'menuFile
+        '
+        Me.menuFile.Index = 0
+        Me.menuFile.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuFileOpen, Me.menuFileExit})
+        Me.menuFile.Text = "File"
+        '
+        'menuFileOpen
+        '
+        Me.menuFileOpen.Index = 0
+        Me.menuFileOpen.Text = "Open"
+        '
+        'menuFileExit
+        '
+        Me.menuFileExit.Index = 1
+        Me.menuFileExit.Text = "Exit"
+        '
+        'menuAction
+        '
+        Me.menuAction.Index = 1
+        Me.menuAction.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuActionResult, Me.menuActionTranslate})
+        Me.menuAction.Text = "Action"
+        '
+        'menuActionResult
+        '
+        Me.menuActionResult.Index = 0
+        Me.menuActionResult.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuActionDisplay, Me.menuActionSave})
+        Me.menuActionResult.Text = "Result"
+        '
+        'menuActionDisplay
+        '
+        Me.menuActionDisplay.Checked = true
+        Me.menuActionDisplay.Index = 0
+        Me.menuActionDisplay.RadioCheck = true
+        Me.menuActionDisplay.Text = "Displays in Text Box"
+        '
+        'menuActionSave
+        '
+        Me.menuActionSave.Index = 1
+        Me.menuActionSave.RadioCheck = true
+        Me.menuActionSave.Text = "Saves to File"
+        '
+        'menuActionTranslate
+        '
+        Me.menuActionTranslate.Index = 1
+        Me.menuActionTranslate.Text = "Translate ..."
+        '
+        'menuItem1
+        '
+        Me.menuItem1.Index = 2
+        Me.menuItem1.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuGlyphReaderEngine, Me.menuOmniPage, Me.menuTesseract3})
+        Me.menuItem1.Text = "Engine"
+        '
+        'menuGlyphReaderEngine
+        '
+        Me.menuGlyphReaderEngine.Index = 0
+        Me.menuGlyphReaderEngine.Text = "GlyphReader"
+        '
+        'menuOmniPage
+        '
+        Me.menuOmniPage.Index = 1
+        Me.menuOmniPage.Text = "OmniPage"
+        '
+        'menuTesseract3
+        '
+        Me.menuTesseract3.Index = 2
+        Me.menuTesseract3.Text = "Tesseract3"
+        '
+        'menuHelp
+        '
+        Me.menuHelp.Index = 3
+        Me.menuHelp.MenuItems.AddRange(New System.Windows.Forms.MenuItem() {Me.menuHelpAbout})
+        Me.menuHelp.Text = "Help"
+        '
+        'menuHelpAbout
+        '
+        Me.menuHelpAbout.Index = 0
+        Me.menuHelpAbout.Text = "About ..."
+        '
+        'workspaceViewer1
+        '
+        Me.workspaceViewer1.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom)  _
+            Or System.Windows.Forms.AnchorStyles.Left)  _
+            Or System.Windows.Forms.AnchorStyles.Right),System.Windows.Forms.AnchorStyles)
+        Me.workspaceViewer1.AntialiasDisplay = Atalasoft.Imaging.WinControls.AntialiasDisplayMode.ReductionOnly
+        Me.workspaceViewer1.AutoZoom = Atalasoft.Imaging.WinControls.AutoZoomMode.BestFitShrinkOnly
+        Me.workspaceViewer1.DisplayProfile = Nothing
+        Me.workspaceViewer1.Location = New System.Drawing.Point(352, 0)
+        Me.workspaceViewer1.Magnifier.BackColor = System.Drawing.Color.White
+        Me.workspaceViewer1.Magnifier.BorderColor = System.Drawing.Color.Black
+        Me.workspaceViewer1.Magnifier.Size = New System.Drawing.Size(100, 100)
+        Me.workspaceViewer1.Name = "workspaceViewer1"
+        Me.workspaceViewer1.OutputProfile = Nothing
+        Me.workspaceViewer1.Selection = Nothing
+        Me.workspaceViewer1.Size = New System.Drawing.Size(520, 616)
+        Me.workspaceViewer1.TabIndex = 3
+        Me.workspaceViewer1.Text = "workspaceViewer1"
+        '
+        'progressBar1
+        '
+        Me.progressBar1.Anchor = CType(((System.Windows.Forms.AnchorStyles.Bottom Or System.Windows.Forms.AnchorStyles.Left)  _
+            Or System.Windows.Forms.AnchorStyles.Right),System.Windows.Forms.AnchorStyles)
+        Me.progressBar1.Location = New System.Drawing.Point(344, 624)
+        Me.progressBar1.Name = "progressBar1"
+        Me.progressBar1.Size = New System.Drawing.Size(528, 24)
+        Me.progressBar1.TabIndex = 4
+        '
+        'splitter1
+        '
+        Me.splitter1.Location = New System.Drawing.Point(336, 0)
+        Me.splitter1.Name = "splitter1"
+        Me.splitter1.Size = New System.Drawing.Size(8, 649)
+        Me.splitter1.TabIndex = 5
+        Me.splitter1.TabStop = false
+        '
+        'Form1
+        '
+        Me.AutoScaleBaseSize = New System.Drawing.Size(5, 13)
+        Me.ClientSize = New System.Drawing.Size(880, 649)
+        Me.Controls.Add(Me.splitter1)
+        Me.Controls.Add(Me.progressBar1)
+        Me.Controls.Add(Me.workspaceViewer1)
+        Me.Controls.Add(Me.textBox1)
+        Me.Menu = Me.mainMenu1
+        Me.Name = "Form1"
+        Me.Text = "Atalasoft Simple OCR Demo"
+        Me.ResumeLayout(false)
+        Me.PerformLayout
 
-        End Sub
+End Sub
 
 #End Region
 
@@ -297,11 +292,11 @@ Namespace SimpleOCR
                 ' Pick a licensed engine to start with.
                 Me.menuGlyphReaderEngine.Enabled = _hasGR
                 If _hasGR Then
-                    MakeGlyphReaderEngine()
+                    SelectGlyphReaderEngine()
                     Me.menuGlyphReaderEngine.Checked = True
                 Else
-                    MakeTesseractEngine()
-                    Me.menuTesseract.Checked = True
+                    SelectTesseract3Engine()
+                    Me.menuTesseract3.Checked = True
                 End If
 
             End If
@@ -459,8 +454,14 @@ Namespace SimpleOCR
 
         Private Sub Form1_Closing(ByVal sender As Object, ByVal e As System.ComponentModel.CancelEventArgs) Handles MyBase.Closing
             ' ShutDown only when the form is being closed.
-            If Not _engine Is Nothing Then
-                _engine.ShutDown()
+            If Not _tesseract3 Is Nothing Then
+                _tesseract3.ShutDown()
+            End If
+            If Not _glyphReader Is Nothing Then
+                _glyphReader.ShutDown()
+            End If
+            If Not _omniPage Is Nothing Then
+                _omniPage.ShutDown()
             End If
         End Sub
 
@@ -523,6 +524,24 @@ Namespace SimpleOCR
                         mimeFilter &= s & " (.csv)|*.csv|"
                     Case "application/vnd.lotus-1-2-3"
                         mimeFilter &= s & " (.txt)|*.txt|"
+                    Case "application/epub+zip"
+                        mimeFilter &= s & " (.epub)|*.epub|"
+                    Case "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        mimeFilter &= s & " (.docx)|*.docx|"
+                    Case "application/vnd.ms-excel"
+                        mimeFilter &= s & " (.xls)|*.xls|"
+                    Case "application/excel"
+                        mimeFilter &= s & " (.xls)|*.xls|"
+                    Case "application/vnd.ms-powerpoint"
+                        mimeFilter &= s & " (.ppt)|*.ppt|"
+                    Case "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                        mimeFilter &= s & " (.pptx)|*.pptx|"
+                    Case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        mimeFilter &= s & " (.xlsx)|*.xlsx|"
+                    Case "text/xml"
+                        mimeFilter &= s & " (.xml)|*.xml|"
+                    Case "application/vnd.ms-xpsdocument"
+                        mimeFilter &= s & " (.xps)|*.xps|"
                     Case Else
                         mimeFilter &= s & " (.???)|*.*|"
                 End Select
@@ -533,42 +552,37 @@ Namespace SimpleOCR
 #End Region
 
 #Region "OCR"
-        Private Sub MakeGlyphReaderEngine()
-            Dim oldEngine As OcrEngine = _engine
-            _engine = New Atalasoft.Ocr.GlyphReader.GlyphReaderEngine
-            If Not oldEngine Is Nothing Then
-                oldEngine.ShutDown()
+        Private Sub SelectGlyphReaderEngine()
+            If _glyphReader Is Nothing 
+                _glyphReader = New Atalasoft.Ocr.GlyphReader.GlyphReaderEngine
+                TieInEngineEvents(_glyphReader)
             End If
-            TieInEngineEvents()
-        End Sub
-        Private Sub MakeTesseractEngine()
-            Dim oldEngine As OcrEngine = _engine
-            _engine = New Atalasoft.Ocr.Tesseract.TesseractEngine
-            If Not oldEngine Is Nothing Then
-                oldEngine.ShutDown()
+            If _glyphReader IsNot Nothing
+                _engine = _glyphReader
+                LoadMimeMenu()
             End If
-            TieInEngineEvents()
         End Sub
-        Private Sub MakeTesseract3Engine()
-            Dim oldEngine As OcrEngine = _engine
-            _engine = New Atalasoft.Ocr.Tesseract.Tesseract3Engine
-            If Not oldEngine Is Nothing Then
-                oldEngine.ShutDown()
+        
+        Private Sub SelectTesseract3Engine()
+            If _tesseract3 Is Nothing 
+                _tesseract3 = New Atalasoft.Ocr.Tesseract.Tesseract3Engine()
+                TieInEngineEvents(_tesseract3)
             End If
-            TieInEngineEvents()
+            If _tesseract3 IsNot Nothing
+                _engine = _tesseract3
+                LoadMimeMenu()
+            End If
         End Sub
-        Private Sub TieInEngineEvents()
+        Private Sub TieInEngineEvents(ByVal engine As OcrEngine)
             ' Add event handler to show translation progress
-            AddHandler _engine.PageProgress, AddressOf _engine_PageProgress
-            _engine.Initialize()
-            AddPdfTranslator()
-            ' Adds the list of supported output formats to the 'Action' menu.
-            LoadMimeMenu()
+            AddHandler engine.PageProgress, AddressOf _engine_PageProgress
+            engine.Initialize()
+            AddPdfTranslator(engine)
         End Sub
-        Private Sub AddPdfTranslator()
+        Private Sub AddPdfTranslator(ByVal engine As OcrEngine)
             Dim pdf As PdfTranslator = New PdfTranslator
             pdf.OutputType = PdfTranslatorOutputType.TextUnderImage
-            _engine.Translators.Add(pdf)
+            engine.Translators.Add(pdf)
         End Sub
 
         ' event handler to select what to do with the results
@@ -609,6 +623,7 @@ Namespace SimpleOCR
                 MessageBox.Show("No File Loaded... Please open a file and try again.")
             Else
                 Try
+                    _outputFile = DefaultOutputFile
                     ' choose output file location, either a temp directory, or a user selected spot.
                     If _saveToFile Then
                         _outputFile = GetSaveFileName()
@@ -644,7 +659,15 @@ Namespace SimpleOCR
                         Loop
                         input.Close()
                     Else
+                        Try
                         System.Diagnostics.Process.Start(_outputFile)
+                        Catch ex As Exception
+                            If File.Exists(_outputFile)
+                                MessageBox.Show(Me, "File \"" + _outputFile + "\" is created.", "Info", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                            Else
+                                MessageBox.Show(Me, ex.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                            End If
+                        End Try
                     End If
                 Catch ex As Exception
                     ' if its a license exception, its probably because of pdfTranslator
@@ -660,7 +683,7 @@ Namespace SimpleOCR
 
         Private Sub menuHelpAbout_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles menuHelpAbout.Click
             Dim aboutBox As AtalaDemos.AboutBox.About = New AtalaDemos.AboutBox.About("About Atalasoft Simple OCR Demo", "DotImage Simple OCR Demo")
-            aboutBox.Description = "Demonstrates the basics of OCR.  This 'no frills' example demonstrates translating an image to a text file or searchable PDF.  The output text style (or mime type) can be formatted as any of the supported types.  This is a great place to get started with DotImage OCR.  Requires evaluation or purchased licenses of DotImage Document Imaging, and at least one of these OCR Add-ons: GlyphReader, RecoStar or Tesseract."
+            aboutBox.Description = "Demonstrates the basics of OCR.  This 'no frills' example demonstrates translating an image to a text file or searchable PDF.  The output text style (or mime type) can be formatted as any of the supported types.  This is a great place to get started with DotImage OCR.  Requires evaluation or purchased licenses of DotImage Document Imaging, and at least one of these OCR Add-ons: GlyphReader, OmniPage or Tesseract."
             aboutBox.ShowDialog()
         End Sub
 
@@ -672,9 +695,10 @@ Namespace SimpleOCR
 
         Private Sub menuGlyphReaderEngine_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles menuGlyphReaderEngine.Click
             Try
-                MakeGlyphReaderEngine()
+                SelectGlyphReaderEngine()
                 menuGlyphReaderEngine.Checked = True
-                menuTesseract.Checked = False
+                menuTesseract3.Checked = False
+                menuOmniPage.Checked = False
             Catch ex As AtalasoftLicenseException
                 MessageBox.Show("This Demo requires a DotImage GlyphReader OCR License.  Please request an evaluation license, or purchase one from www.atalasoft.com" & Constants.vbCrLf & Constants.vbCrLf & ex.ToString(), "Atalasoft License Exception", MessageBoxButtons.OK, MessageBoxIcon.Stop, MessageBoxDefaultButton.Button1)
             End Try
@@ -688,69 +712,39 @@ Namespace SimpleOCR
             progressBar1.Width = workspaceViewer1.Width
         End Sub
 
-        Private Sub menuTesseract_Click(ByVal sender As Object, ByVal e As System.EventArgs) Handles menuTesseract.Click
-            Try
-                MakeTesseractEngine()
-                menuGlyphReaderEngine.Checked = False
-                menuTesseract.Checked = True
-                menuTesseract3.Checked = False
-                menuAbbyy.Checked = False
-            Catch ex As AtalasoftLicenseException
-                MessageBox.Show("Selecting Tesseract OCR requires a DotImage OCR License.  Please request an evaluation license, or purchase one from www.atalasoft.com" & Constants.vbCrLf & Constants.vbCrLf & ex.ToString(), "Atalasoft License Exception", MessageBoxButtons.OK, MessageBoxIcon.Stop, MessageBoxDefaultButton.Button1)
-            End Try
-
-        End Sub
-
         Private Sub menuTesseract3_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles menuTesseract3.Click
             Try
-                MakeTesseract3Engine()
+                SelectTesseract3Engine()
                 menuGlyphReaderEngine.Checked = False
-                menuTesseract.Checked = False
                 menuTesseract3.Checked = True
-                menuAbbyy.Checked = False
+                menuOmniPage.Checked = False
             Catch ex As AtalasoftLicenseException
                 MessageBox.Show("Selecting Tesseract OCR requires a DotImage OCR License.  Please request an evaluation license, or purchase one from www.atalasoft.com" & Constants.vbCrLf & Constants.vbCrLf & ex.ToString(), "Atalasoft License Exception", MessageBoxButtons.OK, MessageBoxIcon.Stop, MessageBoxDefaultButton.Button1)
             End Try
         End Sub
 
-        Private Sub menuAbbyy_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles menuAbbyy.Click
-            SelectAbbyyEngine()
+        Private Sub menuOmniPage_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles menuOmniPage.Click
+            SelectOmniPageEngine()
             menuGlyphReaderEngine.Checked = False
             menuTesseract3.Checked = False
-            menuTesseract.Checked = False
-            menuAbbyy.Checked = True
+            menuOmniPage.Checked = True
         End Sub
 
-        Private Sub SelectAbbyyEngine()
-            If _abbyyEngine Is Nothing Then
-                Try
-                    _abbyyLoader = New AbbyyLoader("C:\Program Files (x86)\Atalasoft\DotImage 10.7\bin\OCRResources\ABBYY")
-                    If _abbyyLoader IsNot Nothing Then
-                        ' try to create a RecoStar engine
-                        _abbyyEngine = New AbbyyEngine()
-                        'InitializeEngine(_recoStar)
-                        _abbyyEngine.Initialize()
-                        AddHandler _abbyyEngine.PageProgress, AddressOf _engine_PageProgress
-                        Dim pdf As New PdfTranslator()
-                        pdf.OutputType = PdfTranslatorOutputType.TextUnderImage
-                        _abbyyEngine.Translators.Add(pdf)
-                    End If
-                Catch ex As AtalasoftLicenseException
-                    LicenseCheckFailure("Using Abbyy OCR requires an Atalasoft DotImage OCR License ... " & ex.Message)
-                Catch err As Exception
-                    MessageBox.Show(err.Message, APPTITLE, MessageBoxButtons.OK, MessageBoxIcon.Information)
-                End Try
-            End If
-            If _abbyyEngine IsNot Nothing Then
-                'UpdateMenusForEngine()
-                Dim oldEngine As OcrEngine = _engine
-                _engine = _abbyyEngine
-                If Not oldEngine Is Nothing Then
-                    oldEngine.ShutDown()
+        Private Sub SelectOmniPageEngine()
+            Try
+                If _omniPage Is Nothing 
+                    _omniPage = New OmniPageEngine
+                    TieInEngineEvents(_omniPage)
                 End If
-            End If
+                If _omniPage IsNot Nothing
+                    _engine = _omniPage
+                    LoadMimeMenu()
+                End If
+            Catch ex As AtalasoftLicenseException
+                LicenseCheckFailure("Using OmniPage OCR requires an Atalasoft DotImage OCR License ... " & ex.Message)
+            Catch err As Exception
+                MessageBox.Show(err.Message, APPTITLE, MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End Try
         End Sub
-
-
     End Class
 End Namespace
